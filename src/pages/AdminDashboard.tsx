@@ -42,7 +42,7 @@ export default function AdminDashboard() {
      queryKey: ['posts'],
      queryFn: async () => {
         const { data } = await api.get('/posts');
-        return data;
+        return Array.isArray(data) ? data : [];
      }
   });
 

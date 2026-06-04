@@ -14,12 +14,15 @@ export default function BlogDetails() {
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState('');
 
-  const { data: post, isLoading } = useQuery<Post>({
-    queryKey: ['post', slug],
-    queryFn: async () => {
+  const { data: post, isLoading } = useQuery<Post | null>({
+     queryKey: ['post', slug],
+     queryFn: async () => {
       const { data } = await api.get(`/posts/${slug}`);
+      if (!data || typeof data !== 'object' || Array.isArray(data) || !('content' in data)) {
+        return null;
+      }
       return data;
-    }
+     }
   });
 
   const { data: comments } = useQuery<Comment[]>({

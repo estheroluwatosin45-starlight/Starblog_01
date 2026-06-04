@@ -11,7 +11,7 @@ export default function Home() {
     queryKey: ['posts', 'home'],
     queryFn: async () => {
       const { data } = await api.get('/posts');
-      return data;
+      return Array.isArray(data) ? data : [];
     }
   });
 
