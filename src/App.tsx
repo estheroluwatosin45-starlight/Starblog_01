@@ -34,12 +34,21 @@ function Layout() {
   );
 }
 
+function AdminLayout() {
+  return (
+    <div className="min-h-screen font-sans">
+      <AdminDashboard />
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
           <Routes>
+            <Route path="/admin" element={<AdminLayout />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="about" element={<About />} />
@@ -48,7 +57,6 @@ export default function App() {
               <Route path="contact" element={<Contact />} />
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
-              <Route path="admin" element={<AdminDashboard />} />
             </Route>
           </Routes>
         </Router>
