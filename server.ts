@@ -95,11 +95,35 @@ const demoPosts = [
   },
 ];
 
-// Helper: Require Supabase
+// Local mock data store for fallback authentication and CRUD when Supabase is missing
+interface MockUser {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  role: 'admin' | 'user';
+  avatar?: string;
+}
+
+const mockUsers: MockUser[] = [];
+
+// Seed admin user on start
+const seedMockAdmin = async () => {
+  const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
+  mockUsers.push({
+    id: 'demo-admin-id',
+    name: 'Administrator',
+    email: 'admin@starblog.com',
+    password_hash: adminPasswordHash,
+    role: 'admin',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=250&auto=format&fit=crop'
+  });
+  console.log('Seeded local mock admin user: admin@starblog.com');
+};
+seedMockAdmin().catch(console.error);
+
+// Helper: Require Supabase (bypassed to allow local mock authentication when Supabase is absent)
 const requireDb = (req: any, res: any, next: any) => {
-  if (!supabase) {
-    return res.status(500).json({ error: 'Supabase credentials missing. Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Secrets.' });
-  }
   next();
 };
 
@@ -134,18 +158,37 @@ app.post('/api/auth/register', requireDb, async (req, res) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) return res.status(400).json({ error: 'Missing fields' });
     
-    const { data: existingUser } = await supabase.from('users').select('*').eq('email', email).single();
-    if (existingUser) return res.status(400).json({ error: 'Email already exists' });
-    
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const { data: newUser, error } = await supabase.from('users').insert([{
-      name, email, password_hash: hashedPassword, role: 'user'
-    }]).select().single();
-    
-    if (error) throw error;
-    
-    const token = jwt.sign({ id: newUser.id, role: newUser.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-    res.json({ token, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role } });
+    if (supabase) {
+      const { data: existingUser } = await supabase.from('users').select('*').eq('email', email).single();
+      if (existingUser) return res.status(400).json({ error: 'Email already exists' });
+      
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const { data: newUser, error } = await supabase.from('users').insert([{
+        name, email, password_hash: hashedPassword, role: 'user'
+      }]).select().single();
+      
+      if (error) throw error;
+      
+      const token = jwt.sign({ id: newUser.id, role: newUser.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+      res.json({ token, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role } });
+    } else {
+      const existingUser = mockUsers.find(u => u.email === email);
+      if (existingUser) return res.status(400).json({ error: 'Email already exists' });
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser: MockUser = {
+        id: `mock-user-${Date.now()}`,
+        name,
+        email,
+        password_hash: hashedPassword,
+        role: 'user',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=250&auto=format&fit=crop'
+      };
+      mockUsers.push(newUser);
+
+      const token = jwt.sign({ id: newUser.id, role: newUser.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+      res.json({ token, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role } });
+    }
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -154,14 +197,25 @@ app.post('/api/auth/register', requireDb, async (req, res) => {
 app.post('/api/auth/login', requireDb, async (req, res) => {
   try {
     const { email, password } = req.body;
-    const { data: user } = await supabase.from('users').select('*').eq('email', email).single();
-    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
-    
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-    if (!validPassword) return res.status(400).json({ error: 'Invalid credentials' });
-    
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    if (supabase) {
+      const { data: user } = await supabase.from('users').select('*').eq('email', email).single();
+      if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+      
+      const validPassword = await bcrypt.compare(password, user.password_hash);
+      if (!validPassword) return res.status(400).json({ error: 'Invalid credentials' });
+      
+      const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+      res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    } else {
+      const user = mockUsers.find(u => u.email === email);
+      if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+
+      const validPassword = await bcrypt.compare(password, user.password_hash);
+      if (!validPassword) return res.status(400).json({ error: 'Invalid credentials' });
+
+      const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+      res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    }
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -169,9 +223,15 @@ app.post('/api/auth/login', requireDb, async (req, res) => {
 
 app.get('/api/auth/me', requireDb, authenticateToken, async (req: any, res) => {
     try {
-      const { data: user } = await supabase.from('users').select('id, name, email, role, avatar').eq('id', req.user.id).single();
-      if (!user) return res.status(404).json({error: 'User not found'});
-      res.json(user);
+      if (supabase) {
+        const { data: user } = await supabase.from('users').select('id, name, email, role, avatar').eq('id', req.user.id).single();
+        if (!user) return res.status(404).json({error: 'User not found'});
+        res.json(user);
+      } else {
+        const user = mockUsers.find(u => u.id === req.user.id);
+        if (!user) return res.status(404).json({error: 'User not found'});
+        res.json({ id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar });
+      }
     } catch(err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -219,9 +279,29 @@ app.get('/api/posts/:slug', async (req, res) => {
 app.post('/api/posts', requireDb, authenticateToken, requireAdmin, async (req: any, res) => {
   try {
     const postData = { ...req.body, author_id: req.user.id };
-    const { data, error } = await supabase.from('posts').insert([postData]).select().single();
-    if (error) throw error;
-    res.json(data);
+    if (supabase) {
+      const { data, error } = await supabase.from('posts').insert([postData]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } else {
+      const newPost = {
+        id: `demo-post-${Date.now()}`,
+        title: postData.title,
+        slug: postData.slug,
+        excerpt: postData.excerpt,
+        content: postData.content,
+        featured_image: postData.featured_image || 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?q=80&w=1600&auto=format&fit=crop',
+        category_id: postData.category_id,
+        author_id: postData.author_id,
+        status: postData.status || 'published',
+        views: 0,
+        created_at: new Date().toISOString(),
+        author: { name: req.user.name || 'Administrator' },
+        category: { name: demoCategories.find(c => c.id === postData.category_id)?.name || 'Design' }
+      };
+      demoPosts.unshift(newPost);
+      res.json(newPost);
+    }
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -335,13 +415,22 @@ app.post('/api/contact', requireDb, async (req, res) => {
 // ADMIN DASHBOARD STATS
 app.get('/api/admin/stats', requireDb, authenticateToken, requireAdmin, async (req, res) => {
     try {
-       const [{count: posts}, {count: users}, {count: comments}, {count: likes}] = await Promise.all([
-           supabase.from('posts').select('*', {count: 'exact', head: true}),
-           supabase.from('users').select('*', {count: 'exact', head: true}),
-           supabase.from('comments').select('*', {count: 'exact', head: true}),
-           supabase.from('likes').select('*', {count: 'exact', head: true})
-       ]);
-       res.json({posts, users, comments, likes});
+       if (supabase) {
+         const [{count: posts}, {count: users}, {count: comments}, {count: likes}] = await Promise.all([
+             supabase.from('posts').select('*', {count: 'exact', head: true}),
+             supabase.from('users').select('*', {count: 'exact', head: true}),
+             supabase.from('comments').select('*', {count: 'exact', head: true}),
+             supabase.from('likes').select('*', {count: 'exact', head: true})
+         ]);
+         res.json({posts, users, comments, likes});
+       } else {
+         res.json({
+           posts: demoPosts.length,
+           users: mockUsers.length,
+           comments: 12,
+           likes: 38
+         });
+       }
     } catch(err: any) {
         res.status(500).json({ error: err.message });
     }

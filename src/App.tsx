@@ -34,6 +34,14 @@ function Layout() {
   );
 }
 
+function AuthLayout() {
+  return (
+    <div className="min-h-screen font-sans bg-slate-50 dark:bg-slate-950 flex items-center justify-center py-12">
+      <Outlet />
+    </div>
+  );
+}
+
 function AdminLayout() {
   return (
     <div className="min-h-screen font-sans">
@@ -49,14 +57,16 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/admin" element={<AdminLayout />} />
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+            </Route>
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="about" element={<About />} />
               <Route path="blog" element={<BlogList />} />
               <Route path="blog/:slug" element={<BlogDetails />} />
               <Route path="contact" element={<Contact />} />
-              <Route path="login" element={<Login />} />
-              <Route path="register" element={<Register />} />
             </Route>
           </Routes>
         </Router>
