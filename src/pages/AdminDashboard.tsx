@@ -2,14 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Navigate } from 'react-router-dom';
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
-import { LayoutDashboard, FileText, List, MessageSquare, Users, Settings, Plus, Edit2, Trash2, Eye, EyeOff, Lock, Key, Aperture, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, FileText, List, MessageSquare, Users, Settings, Plus, Edit2, Trash2, Eye, EyeOff, Lock, Key, Aperture, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { format } from 'date-fns';
 
-function AdminLogin() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+function AdminLogin({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme: () => void }) {
+  const [email, setEmail] = useState('admin@starblog.com');
+  const [password, setPassword] = useState('admin2026');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -38,6 +38,18 @@ function AdminLogin() {
       {/* Background glowing circles */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      {/* Theme Toggle Button in top right */}
+      <div className="absolute top-4 right-4 z-20">
+         <button
+            type="button"
+            onClick={toggleTheme}
+            className="p-2.5 rounded-full border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer bg-white/50 dark:bg-slate-900/50"
+            aria-label="Toggle Theme"
+         >
+            {theme === 'dark' ? <Sun className="w-5 h-5 text-emerald-500" /> : <Moon className="w-5 h-5 text-emerald-500" />}
+         </button>
+      </div>
 
       <div className="w-full max-w-md bg-white/70 dark:bg-slate-900/65 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-2xl relative z-10">
         <div className="flex flex-col items-center mb-8">
@@ -106,9 +118,36 @@ function AdminLogin() {
 }
 
 export default function AdminDashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        return savedTheme;
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
   
   // Post form state
   const [title, setTitle] = useState('');
@@ -163,7 +202,7 @@ export default function AdminDashboard() {
   const isAdmin = user?.role === 'admin';
 
   if (!isAdmin) {
-     return <AdminLogin />;
+     return <AdminLogin theme={theme} toggleTheme={toggleTheme} />;
   }
 
   const tabs = [
@@ -188,9 +227,26 @@ export default function AdminDashboard() {
           </div>
        )}
        
-       <div className="mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight">Admin Console</h1>
-          <p className="text-slate-500">Manage your publication, content, and team.</p>
+       <div className="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div>
+             <h1 className="text-3xl font-extrabold tracking-tight">Admin Console</h1>
+             <p className="text-slate-500">Manage your publication, content, and team.</p>
+          </div>
+          <div className="flex items-center gap-3">
+             <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer bg-white/50 dark:bg-slate-900/50"
+                aria-label="Toggle Theme"
+             >
+                {theme === 'dark' ? <Sun className="w-5 h-5 text-emerald-500" /> : <Moon className="w-5 h-5 text-emerald-500" />}
+             </button>
+             <button
+                onClick={logout}
+                className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-800 px-4 py-2.5 rounded-xl bg-white/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-white/5 transition-all"
+             >
+                Logout
+             </button>
+          </div>
        </div>
 
        <div className="flex flex-col md:flex-row gap-8">

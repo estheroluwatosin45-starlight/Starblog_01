@@ -46,27 +46,43 @@ export default function BlogDetails() {
   const { data: userLike } = useQuery<{liked: boolean}>({
      queryKey: ['userLike', post?.id],
      queryFn: async () => {
-        if (!user) return {liked: false};
+        if (!user) {
+          const anonLikes = JSON.parse(localStorage.getItem('anon_likes') || '[]');
+          return { liked: anonLikes.includes(post?.id) };
+        }
         const {data} = await api.get(`/likes/${post?.id}/user`);
         return data;
      },
-     enabled: !!post?.id && !!user
+     enabled: !!post?.id
   });
 
   const toggleLike = useMutation({
      mutationFn: async () => {
-         if (!user) throw new Error("Must be logged in");
-         if (userLike?.liked) {
-            await api.delete(`/likes/${post?.id}`);
+         const isLiked = userLike?.liked;
+         if (user) {
+            if (isLiked) {
+               await api.delete(`/likes/${post?.id}`);
+            } else {
+               await api.post(`/likes`, { post_id: post?.id });
+            }
          } else {
-            await api.post(`/likes`, { post_id: post?.id });
+            const anonLikes = JSON.parse(localStorage.getItem('anon_likes') || '[]');
+            if (isLiked) {
+               await api.delete(`/likes/${post?.id}`);
+               const index = anonLikes.indexOf(post?.id);
+               if (index > -1) anonLikes.splice(index, 1);
+            } else {
+               await api.post(`/likes`, { post_id: post?.id });
+               anonLikes.push(post?.id);
+            }
+            localStorage.setItem('anon_likes', JSON.stringify(anonLikes));
          }
      },
      onSuccess: () => {
          queryClient.invalidateQueries({queryKey: ['likes', post?.id]});
          queryClient.invalidateQueries({queryKey: ['userLike', post?.id]});
      },
-     onError: () => toast.error('Please sign in to like articles')
+     onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to toggle like')
   });
 
   const submitComment = useMutation({
@@ -80,7 +96,7 @@ export default function BlogDetails() {
           toast.success('Comment posted!');
       },
       onError: (err: any) => {
-          toast.error(err.response?.data?.error || 'Failed to post comment. Ensure you are signed in.');
+          toast.error(err.response?.data?.error || 'Failed to post comment.');
       }
   });
 
@@ -146,33 +162,26 @@ export default function BlogDetails() {
        {/* Comments */}
        <div className="space-y-8">
           <h3 className="text-2xl font-bold">Comments</h3>
-          
-          {user ? (
-              <div className="flex gap-4">
-                 <div className="w-10 h-10 rounded-full bg-slate-200 shrink-0 flex items-center justify-center font-bold">
-                    {user.name.charAt(0)}
-                 </div>
-                 <div className="flex-1 space-y-2">
-                    <textarea 
-                       value={commentText}
-                       onChange={(e) => setCommentText(e.target.value)}
-                       placeholder="Add to the discussion..."
-                       className="w-full glass-input p-4 min-h-[100px] resize-none"
-                    />
-                    <button 
-                       onClick={() => submitComment.mutate()}
-                       disabled={!commentText.trim() || submitComment.isPending}
-                       className="px-6 py-2 bg-emerald-500 text-white font-medium rounded-full hover:bg-emerald-600 disabled:opacity-50 transition-colors"
-                    >
-                       {submitComment.isPending ? 'Posting...' : 'Post Comment'}
-                    </button>
-                 </div>
+          <div className="flex gap-4">
+              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300">
+                 {user ? user.name.charAt(0) : 'A'}
               </div>
-          ) : (
-             <div className="glass-card p-6 text-center text-slate-600">
-                <Link to="/login" className="text-emerald-500 font-medium hover:underline">Sign in</Link> to join the discussion.
-             </div>
-          )}
+              <div className="flex-1 space-y-2">
+                 <textarea 
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder={user ? "Add to the discussion..." : "Add to the discussion as Anonymous..."}
+                    className="w-full glass-input p-4 min-h-[100px] resize-none"
+                 />
+                 <button 
+                    onClick={() => submitComment.mutate()}
+                    disabled={!commentText.trim() || submitComment.isPending}
+                    className="px-6 py-2 bg-emerald-500 text-white font-medium rounded-full hover:bg-emerald-600 disabled:opacity-50 transition-colors cursor-pointer"
+                 >
+                    {submitComment.isPending ? 'Posting...' : 'Post Comment'}
+                 </button>
+              </div>
+           </div>
 
           <div className="space-y-6 mt-8">
              {comments?.map((comment) => (

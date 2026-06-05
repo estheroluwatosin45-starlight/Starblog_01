@@ -44,7 +44,7 @@ const seedSupabaseAdmin = async () => {
       .maybeSingle();
     
     if (!existingAdmin) {
-      const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
+      const adminPasswordHash = await bcrypt.hash('admin2026', 10);
       const { error: insertError } = await supabase.from('users').insert([{
         name: 'Administrator',
         email: 'admin@starblog.com',
@@ -79,53 +79,7 @@ const demoCategories = [
   { id: 'demo-category-culture', name: 'Culture', slug: 'culture' },
 ];
 
-const demoPosts = [
-  {
-    id: 'demo-post-1',
-    title: 'Building calmer digital spaces',
-    slug: 'building-calmer-digital-spaces',
-    excerpt: 'A practical look at designing interfaces that feel focused, readable, and humane.',
-    content: 'Great digital spaces give people room to think.\n\nThey reduce visual noise, make the next action obvious, and keep information close to where decisions happen.\n\nThe result is not emptiness. It is clarity.',
-    featured_image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?q=80&w=1600&auto=format&fit=crop',
-    category_id: demoCategories[0].id,
-    author_id: 'demo-author',
-    status: 'published',
-    views: 1240,
-    created_at: new Date('2026-05-20T12:00:00.000Z').toISOString(),
-    author: { name: 'Starblog Studio' },
-    category: { name: demoCategories[0].name },
-  },
-  {
-    id: 'demo-post-2',
-    title: 'What thoughtful automation feels like',
-    slug: 'thoughtful-automation',
-    excerpt: 'Automation works best when it removes friction without hiding control from the people using it.',
-    content: 'Good automation is quiet until it needs to be visible.\n\nIt handles repeated work, explains important decisions, and leaves a clean path for human judgment.',
-    featured_image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1600&auto=format&fit=crop',
-    category_id: demoCategories[1].id,
-    author_id: 'demo-author',
-    status: 'published',
-    views: 980,
-    created_at: new Date('2026-05-12T12:00:00.000Z').toISOString(),
-    author: { name: 'Starblog Studio' },
-    category: { name: demoCategories[1].name },
-  },
-  {
-    id: 'demo-post-3',
-    title: 'The editorial rhythm of modern teams',
-    slug: 'editorial-rhythm-modern-teams',
-    excerpt: 'How small publishing rituals help teams turn scattered ideas into durable knowledge.',
-    content: 'Teams rarely lack ideas. They lack rhythm.\n\nA steady editorial loop helps people capture what matters, sharpen it, and share it while the context is still fresh.',
-    featured_image: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=1600&auto=format&fit=crop',
-    category_id: demoCategories[2].id,
-    author_id: 'demo-author',
-    status: 'published',
-    views: 760,
-    created_at: new Date('2026-05-02T12:00:00.000Z').toISOString(),
-    author: { name: 'Starblog Studio' },
-    category: { name: demoCategories[2].name },
-  },
-];
+const demoPosts: any[] = [];
 
 const DB_FILE = path.join(process.cwd(), 'db.json');
 
@@ -153,6 +107,10 @@ const loadLocalDb = () => {
     if (fs.existsSync(DB_FILE)) {
       const rawData = fs.readFileSync(DB_FILE, 'utf-8');
       localDb = JSON.parse(rawData);
+      // Automatically filter out demo posts to clean up existing databases
+      if (localDb.posts) {
+        localDb.posts = localDb.posts.filter(p => !p.id.startsWith('demo-post-'));
+      }
       console.log('Loaded local DB from file:', DB_FILE);
     } else {
       saveLocalDb();
@@ -178,7 +136,7 @@ loadLocalDb();
 const seedMockAdmin = async () => {
   const adminExists = localDb.users.some(u => u.email === 'admin@starblog.com');
   if (!adminExists) {
-    const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
+    const adminPasswordHash = await bcrypt.hash('admin2026', 10);
     localDb.users.push({
       id: 'demo-admin-id',
       name: 'Administrator',
@@ -270,16 +228,16 @@ app.post('/api/auth/login', requireDb, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (supabase) {
-      // Seed admin account in Supabase on-demand if logging in as admin
-      if (email === 'admin@starblog.com') {
+      // Seed or update admin account in Supabase on-demand if logging in as admin with password admin2026
+      if (email === 'admin@starblog.com' && password === 'admin2026') {
         const { data: existingAdmin } = await supabase
           .from('users')
           .select('*')
           .eq('email', 'admin@starblog.com')
           .maybeSingle();
         
+        const adminPasswordHash = await bcrypt.hash('admin2026', 10);
         if (!existingAdmin) {
-          const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
           await supabase.from('users').insert([{
             name: 'Administrator',
             email: 'admin@starblog.com',
@@ -288,6 +246,16 @@ app.post('/api/auth/login', requireDb, async (req, res) => {
             avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=250&auto=format&fit=crop'
           }]);
           console.log('Seeded administrator account to Supabase on-demand.');
+        } else {
+          // Verify if the password hash matches; if not, or to ensure role/password is set correctly, update it
+          const validPassword = await bcrypt.compare(password, existingAdmin.password_hash);
+          if (!validPassword || existingAdmin.role !== 'admin') {
+            await supabase
+              .from('users')
+              .update({ password_hash: adminPasswordHash, role: 'admin' })
+              .eq('email', 'admin@starblog.com');
+            console.log('Updated administrator credentials in Supabase to admin2026.');
+          }
         }
       }
 
@@ -300,11 +268,11 @@ app.post('/api/auth/login', requireDb, async (req, res) => {
       const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
       res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } else {
-      // Seed admin account in localDb on-demand if logging in as admin
-      if (email === 'admin@starblog.com') {
-        const adminExists = localDb.users.some(u => u.email === 'admin@starblog.com');
-        if (!adminExists) {
-          const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
+      // Seed or update admin account in localDb on-demand if logging in as admin with password admin2026
+      if (email === 'admin@starblog.com' && password === 'admin2026') {
+        const adminIndex = localDb.users.findIndex(u => u.email === 'admin@starblog.com');
+        const adminPasswordHash = await bcrypt.hash('admin2026', 10);
+        if (adminIndex === -1) {
           localDb.users.push({
             id: 'demo-admin-id',
             name: 'Administrator',
@@ -315,6 +283,14 @@ app.post('/api/auth/login', requireDb, async (req, res) => {
           });
           saveLocalDb();
           console.log('Seeded local mock admin user to file on-demand.');
+        } else {
+          const validPassword = await bcrypt.compare(password, localDb.users[adminIndex].password_hash);
+          if (!validPassword || localDb.users[adminIndex].role !== 'admin') {
+            localDb.users[adminIndex].password_hash = adminPasswordHash;
+            localDb.users[adminIndex].role = 'admin';
+            saveLocalDb();
+            console.log('Updated local mock admin user credentials to admin2026.');
+          }
         }
       }
 
@@ -432,9 +408,59 @@ app.get('/api/categories', async (req, res) => {
     }
 });
 
+const getOrCreateAnonymousUser = async () => {
+  const email = 'anonymous@starblog.com';
+  if (supabase) {
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+    
+    if (existingUser) return existingUser;
+    
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert([{
+        name: 'Anonymous Reader',
+        email,
+        password_hash: 'anonymous-no-login',
+        role: 'user',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=250&auto=format&fit=crop'
+      }])
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error creating anonymous user:', error.message);
+      const { data: fallbackUser } = await supabase.from('users').select('*').limit(1).single();
+      return fallbackUser;
+    }
+    return newUser;
+  } else {
+    let existingUser = localDb.users.find(u => u.email === email);
+    if (!existingUser) {
+      existingUser = {
+        id: 'anonymous-user-id',
+        name: 'Anonymous Reader',
+        email,
+        password_hash: 'anonymous-no-login',
+        role: 'user',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=250&auto=format&fit=crop'
+      };
+      localDb.users.push(existingUser);
+      saveLocalDb();
+    }
+    return existingUser;
+  }
+};
+
 // COMMENTS
 app.get('/api/comments/:postId', async (req, res) => {
-   if (!supabase) return res.json([]);
+   if (!supabase) {
+     const postComments = localDb.comments.filter(c => c.post_id === req.params.postId);
+     return res.json(postComments);
+   }
 
    try {
        const {data, error} = await supabase
@@ -449,51 +475,154 @@ app.get('/api/comments/:postId', async (req, res) => {
    }
 });
 
-app.post('/api/comments', requireDb, authenticateToken, async (req: any, res) => {
+app.post('/api/comments', requireDb, async (req: any, res) => {
   try {
       const {post_id, comment} = req.body;
-      const {data, error} = await supabase.from('comments').insert([{
-          post_id, user_id: req.user.id, comment
-      }]).select('*, user:users(name, avatar)').single();
-      if (error) throw error;
-      res.json(data);
+      let user_id = null;
+
+      const authHeader = req.headers['authorization'];
+      const token = authHeader && authHeader.split(' ')[1];
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+          user_id = decoded.id;
+        } catch (err) {}
+      }
+
+      if (!user_id) {
+        const anonUser = await getOrCreateAnonymousUser();
+        user_id = anonUser.id;
+      }
+
+      if (supabase) {
+        const {data, error} = await supabase.from('comments').insert([{
+            post_id, user_id, comment
+        }]).select('*, user:users(name, avatar)').single();
+        if (error) throw error;
+        res.json(data);
+      } else {
+        const anonUser = localDb.users.find(u => u.id === user_id);
+        const newComment = {
+          id: `comment-${Date.now()}`,
+          post_id,
+          user_id,
+          comment,
+          created_at: new Date().toISOString(),
+          user: {
+            name: anonUser?.name || 'Anonymous Reader',
+            avatar: anonUser?.avatar
+          }
+        };
+        localDb.comments.push(newComment);
+        saveLocalDb();
+        res.json(newComment);
+      }
   } catch(error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // LIKES
-app.post('/api/likes', requireDb, authenticateToken, async (req: any, res) => {
+app.post('/api/likes', requireDb, async (req: any, res) => {
     try {
         const {post_id} = req.body;
-        const {error} = await supabase.from('likes').insert([{post_id, user_id: req.user.id}]);
-        if (error && error.code !== '23505') throw error; // Ignore unique violation if already liked
-        
-        // Return updated count
-        const {count} = await supabase.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', post_id);
-        res.json({count});
+        let user_id = null;
+
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        if (token) {
+          try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+            user_id = decoded.id;
+          } catch (err) {}
+        }
+
+        if (!user_id) {
+          const anonUser = await getOrCreateAnonymousUser();
+          user_id = anonUser.id;
+        }
+
+        if (supabase) {
+          const {error} = await supabase.from('likes').insert([{post_id, user_id}]);
+          if (error && error.code !== '23505') throw error; // Ignore unique violation if already liked
+          
+          const {count} = await supabase.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', post_id);
+          res.json({count});
+        } else {
+          const alreadyLikedIndex = localDb.likes.findIndex(l => l.post_id === post_id && l.user_id === user_id);
+          if (alreadyLikedIndex === -1) {
+            localDb.likes.push({ id: `like-${Date.now()}`, post_id, user_id });
+            saveLocalDb();
+          }
+          const count = localDb.likes.filter(l => l.post_id === post_id).length;
+          res.json({count});
+        }
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
 });
 
-app.delete('/api/likes/:postId', requireDb, authenticateToken, async (req: any, res) => {
+app.delete('/api/likes/:postId', requireDb, async (req: any, res) => {
      try {
-        const {error} = await supabase.from('likes').delete().eq('post_id', req.params.postId).eq('user_id', req.user.id);
-        if (error) throw error;
-        
-        const {count} = await supabase.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', req.params.postId);
-        res.json({count});
+        let user_id = null;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        if (token) {
+          try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+            user_id = decoded.id;
+          } catch (err) {}
+        }
+
+        if (!user_id) {
+          const anonUser = await getOrCreateAnonymousUser();
+          user_id = anonUser.id;
+        }
+
+        if (supabase) {
+          const {error} = await supabase.from('likes').delete().eq('post_id', req.params.postId).eq('user_id', user_id);
+          if (error) throw error;
+          
+          const {count} = await supabase.from('likes').select('*', { count: 'exact', head: true }).eq('post_id', req.params.postId);
+          res.json({count});
+        } else {
+          const index = localDb.likes.findIndex(l => l.post_id === req.params.postId && l.user_id === user_id);
+          if (index > -1) {
+            localDb.likes.splice(index, 1);
+            saveLocalDb();
+          }
+          const count = localDb.likes.filter(l => l.post_id === req.params.postId).length;
+          res.json({count});
+        }
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
 });
 
-app.get('/api/likes/:postId/user', requireDb, authenticateToken, async (req: any, res) => {
+app.get('/api/likes/:postId/user', requireDb, async (req: any, res) => {
     try {
-        const {data, error} = await supabase.from('likes').select('id').eq('post_id', req.params.postId).eq('user_id', req.user.id);
-        if (error) throw error;
-        res.json({ liked: data.length > 0 });
+        let user_id = null;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        if (token) {
+          try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+            user_id = decoded.id;
+          } catch (err) {}
+        }
+        
+        if (!user_id) {
+          return res.json({ liked: false });
+        }
+
+        if (supabase) {
+          const {data, error} = await supabase.from('likes').select('id').eq('post_id', req.params.postId).eq('user_id', user_id);
+          if (error) throw error;
+          res.json({ liked: data.length > 0 });
+        } else {
+          const liked = localDb.likes.some(l => l.post_id === req.params.postId && l.user_id === user_id);
+          res.json({ liked });
+        }
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

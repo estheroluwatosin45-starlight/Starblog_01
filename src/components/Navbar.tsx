@@ -97,23 +97,12 @@ export default function Navbar() {
             >
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-            {user ? (
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={logout}
-                  className="text-sm font-semibold text-slate-600 hover:text-rose-500 transition-colors"
-                >
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <a
-                href="/#subscribe"
-                className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 transition-all dark:bg-white dark:text-slate-900 dark:hover:bg-emerald-400"
-              >
-                Subscribe
-              </a>
-            )}
+            <a
+              href="/#subscribe"
+              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 transition-all dark:bg-white dark:text-slate-900 dark:hover:bg-emerald-400"
+            >
+              Subscribe
+            </a>
           </div>
 
           {/* Mobile toggle */}
@@ -152,24 +141,13 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="h-px bg-slate-200 dark:bg-slate-800 my-2" />
-              {user ? (
-                 <>
-                   <button
-                      onClick={() => { logout(); setIsOpen(false); }}
-                      className="block w-full px-4 py-3 text-center rounded-xl font-semibold text-primary text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
-                    >
-                      Logout
-                    </button>
-                 </>
-              ) : (
-                  <a
-                  href="/#subscribe"
-                  onClick={() => setIsOpen(false)}
-                  className="block w-full px-4 py-3 text-center rounded-xl font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 mt-2"
-                >
-                  Subscribe
-                </a>
-              )}
+               <a
+                 href="/#subscribe"
+                 onClick={() => setIsOpen(false)}
+                 className="block w-full px-4 py-3 text-center rounded-xl font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 mt-2"
+               >
+                 Subscribe
+               </a>
               <div className="h-px bg-slate-200 dark:bg-slate-800 my-2" />
               <button
                 onClick={() => { toggleTheme(); setIsOpen(false); }}
