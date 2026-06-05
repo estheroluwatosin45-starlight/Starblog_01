@@ -33,6 +33,36 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
+// Seed admin user in Supabase if missing
+const seedSupabaseAdmin = async () => {
+  if (!supabase) return;
+  try {
+    const { data: existingAdmin } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', 'admin@starblog.com')
+      .maybeSingle();
+    
+    if (!existingAdmin) {
+      const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
+      const { error: insertError } = await supabase.from('users').insert([{
+        name: 'Administrator',
+        email: 'admin@starblog.com',
+        password_hash: adminPasswordHash,
+        role: 'admin',
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=250&auto=format&fit=crop'
+      }]);
+      if (insertError) {
+        console.error('Error seeding admin user to Supabase:', insertError.message);
+      } else {
+        console.log('Seeded administrator account to Supabase successfully.');
+      }
+    }
+  } catch (err: any) {
+    console.error('Failed to check/seed admin in Supabase:', err.message);
+  }
+};
+
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -40,6 +70,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 let supabase: any = null;
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
+  seedSupabaseAdmin().catch(console.error);
 }
 
 const demoCategories = [
