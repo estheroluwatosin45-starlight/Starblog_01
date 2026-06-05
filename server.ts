@@ -270,6 +270,27 @@ app.post('/api/auth/login', requireDb, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (supabase) {
+      // Seed admin account in Supabase on-demand if logging in as admin
+      if (email === 'admin@starblog.com') {
+        const { data: existingAdmin } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', 'admin@starblog.com')
+          .maybeSingle();
+        
+        if (!existingAdmin) {
+          const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
+          await supabase.from('users').insert([{
+            name: 'Administrator',
+            email: 'admin@starblog.com',
+            password_hash: adminPasswordHash,
+            role: 'admin',
+            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=250&auto=format&fit=crop'
+          }]);
+          console.log('Seeded administrator account to Supabase on-demand.');
+        }
+      }
+
       const { data: user } = await supabase.from('users').select('*').eq('email', email).single();
       if (!user) return res.status(400).json({ error: 'Invalid credentials' });
       
@@ -279,6 +300,24 @@ app.post('/api/auth/login', requireDb, async (req, res) => {
       const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
       res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } else {
+      // Seed admin account in localDb on-demand if logging in as admin
+      if (email === 'admin@starblog.com') {
+        const adminExists = localDb.users.some(u => u.email === 'admin@starblog.com');
+        if (!adminExists) {
+          const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
+          localDb.users.push({
+            id: 'demo-admin-id',
+            name: 'Administrator',
+            email: 'admin@starblog.com',
+            password_hash: adminPasswordHash,
+            role: 'admin',
+            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=250&auto=format&fit=crop'
+          });
+          saveLocalDb();
+          console.log('Seeded local mock admin user to file on-demand.');
+        }
+      }
+
       const user = localDb.users.find(u => u.email === email);
       if (!user) return res.status(400).json({ error: 'Invalid credentials' });
 
