@@ -34,27 +34,27 @@ function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
       {/* Background glowing circles */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-      <div className="w-full max-w-md bg-slate-900/65 backdrop-blur-2xl border border-slate-800 rounded-3xl p-8 shadow-2xl relative z-10">
+      <div className="w-full max-w-md bg-white/70 dark:bg-slate-900/65 backdrop-blur-2xl border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-2xl relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
-            <Aperture className="h-9 w-9 text-emerald-400" />
+          <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
+            <Aperture className="h-9 w-9 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
             Admin Portal
           </h2>
-          <p className="text-slate-400 mt-2 text-center text-sm">
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-center text-sm">
             Sign in to access the Starblog administrative console.
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-2">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Email Address
             </label>
             <input
@@ -62,13 +62,13 @@ function AdminLogin() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full glass-input px-4 py-3 bg-slate-950/40 border-slate-800 text-slate-100 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+              className="w-full glass-input px-4 py-3 bg-white/80 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all placeholder:text-slate-400"
               placeholder="admin@starblog.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-2">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Password
             </label>
             <div className="relative">
@@ -77,13 +77,13 @@ function AdminLogin() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full glass-input pl-4 pr-11 py-3 bg-slate-950/40 border-slate-800 text-slate-100 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full glass-input pl-4 pr-11 py-3 bg-white/80 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all placeholder:text-slate-400"
                 placeholder="••••••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-200 transition-colors"
+                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -94,7 +94,7 @@ function AdminLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-emerald-600 dark:hover:bg-emerald-400 font-bold rounded-xl shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? 'Authenticating...' : 'Sign In'}
             </button>

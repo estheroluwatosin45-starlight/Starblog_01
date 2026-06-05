@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../lib/auth';
-import { Menu, X, Aperture } from 'lucide-react';
+import { Menu, X, Aperture, Sun, Moon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '../lib/utils';
 
@@ -10,6 +10,32 @@ export default function Navbar() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        return savedTheme;
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -64,6 +90,13 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 mr-1 rounded-full text-slate-600 dark:text-slate-300 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+              aria-label="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
             {user ? (
               <div className="flex items-center gap-4">
                 <button
@@ -137,6 +170,23 @@ export default function Navbar() {
                   Subscribe
                 </a>
               )}
+              <div className="h-px bg-slate-200 dark:bg-slate-800 my-2" />
+              <button
+                onClick={() => { toggleTheme(); setIsOpen(false); }}
+                className="w-full px-4 py-3 flex items-center justify-center gap-2 rounded-xl font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                {theme === 'dark' ? (
+                  <>
+                    <Sun className="w-5 h-5 text-emerald-500" />
+                    Light Mode
+                  </>
+                ) : (
+                  <>
+                    <Moon className="w-5 h-5 text-emerald-500" />
+                    Dark Mode
+                  </>
+                )}
+              </button>
             </div>
           </motion.div>
         )}

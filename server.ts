@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 
 const app = express();
@@ -95,7 +96,8 @@ const demoPosts = [
   },
 ];
 
-// Local mock data store for fallback authentication and CRUD when Supabase is missing
+const DB_FILE = path.join(process.cwd(), 'db.json');
+
 interface MockUser {
   id: string;
   name: string;
@@ -105,20 +107,58 @@ interface MockUser {
   avatar?: string;
 }
 
-const mockUsers: MockUser[] = [];
+// Local in-memory state loaded/saved to local file DB
+let localDb = {
+  users: [] as MockUser[],
+  posts: demoPosts,
+  categories: demoCategories,
+  comments: [] as any[],
+  likes: [] as any[]
+};
 
-// Seed admin user on start
+// Sync memory state with local JSON file
+const loadLocalDb = () => {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const rawData = fs.readFileSync(DB_FILE, 'utf-8');
+      localDb = JSON.parse(rawData);
+      console.log('Loaded local DB from file:', DB_FILE);
+    } else {
+      saveLocalDb();
+      console.log('Created new local DB file:', DB_FILE);
+    }
+  } catch (err) {
+    console.error('Error reading local db file, using defaults:', err);
+  }
+};
+
+const saveLocalDb = () => {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(localDb, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error writing local db file:', err);
+  }
+};
+
+// Load database immediately
+loadLocalDb();
+
+// Seed admin user on start if missing
 const seedMockAdmin = async () => {
-  const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
-  mockUsers.push({
-    id: 'demo-admin-id',
-    name: 'Administrator',
-    email: 'admin@starblog.com',
-    password_hash: adminPasswordHash,
-    role: 'admin',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=250&auto=format&fit=crop'
-  });
-  console.log('Seeded local mock admin user: admin@starblog.com');
+  const adminExists = localDb.users.some(u => u.email === 'admin@starblog.com');
+  if (!adminExists) {
+    const adminPasswordHash = await bcrypt.hash('admin-secure-password-2026', 10);
+    localDb.users.push({
+      id: 'demo-admin-id',
+      name: 'Administrator',
+      email: 'admin@starblog.com',
+      password_hash: adminPasswordHash,
+      role: 'admin',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=250&auto=format&fit=crop'
+    });
+    saveLocalDb();
+    console.log('Seeded local mock admin user to file: admin@starblog.com');
+  }
 };
 seedMockAdmin().catch(console.error);
 
@@ -172,7 +212,7 @@ app.post('/api/auth/register', requireDb, async (req, res) => {
       const token = jwt.sign({ id: newUser.id, role: newUser.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
       res.json({ token, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role } });
     } else {
-      const existingUser = mockUsers.find(u => u.email === email);
+      const existingUser = localDb.users.find(u => u.email === email);
       if (existingUser) return res.status(400).json({ error: 'Email already exists' });
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -184,7 +224,8 @@ app.post('/api/auth/register', requireDb, async (req, res) => {
         role: 'user',
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=250&auto=format&fit=crop'
       };
-      mockUsers.push(newUser);
+      localDb.users.push(newUser);
+      saveLocalDb();
 
       const token = jwt.sign({ id: newUser.id, role: newUser.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
       res.json({ token, user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role } });
@@ -207,7 +248,7 @@ app.post('/api/auth/login', requireDb, async (req, res) => {
       const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
       res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } else {
-      const user = mockUsers.find(u => u.email === email);
+      const user = localDb.users.find(u => u.email === email);
       if (!user) return res.status(400).json({ error: 'Invalid credentials' });
 
       const validPassword = await bcrypt.compare(password, user.password_hash);
@@ -228,7 +269,7 @@ app.get('/api/auth/me', requireDb, authenticateToken, async (req: any, res) => {
         if (!user) return res.status(404).json({error: 'User not found'});
         res.json(user);
       } else {
-        const user = mockUsers.find(u => u.id === req.user.id);
+        const user = localDb.users.find(u => u.id === req.user.id);
         if (!user) return res.status(404).json({error: 'User not found'});
         res.json({ id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar });
       }
@@ -239,7 +280,7 @@ app.get('/api/auth/me', requireDb, authenticateToken, async (req: any, res) => {
 
 // POSTS
 app.get('/api/posts', async (req, res) => {
-  if (!supabase) return res.json(demoPosts);
+  if (!supabase) return res.json(localDb.posts);
 
   try {
     const { data, error } = await supabase
@@ -256,7 +297,7 @@ app.get('/api/posts', async (req, res) => {
 
 app.get('/api/posts/:slug', async (req, res) => {
   if (!supabase) {
-    const post = demoPosts.find((item) => item.slug === req.params.slug);
+    const post = localDb.posts.find((item) => item.slug === req.params.slug);
     if (!post) return res.status(404).json({ error: 'Not found' });
     return res.json(post);
   }
@@ -297,9 +338,10 @@ app.post('/api/posts', requireDb, authenticateToken, requireAdmin, async (req: a
         views: 0,
         created_at: new Date().toISOString(),
         author: { name: req.user.name || 'Administrator' },
-        category: { name: demoCategories.find(c => c.id === postData.category_id)?.name || 'Design' }
+        category: { name: localDb.categories.find(c => c.id === postData.category_id)?.name || 'Design' }
       };
-      demoPosts.unshift(newPost);
+      localDb.posts.unshift(newPost);
+      saveLocalDb();
       res.json(newPost);
     }
   } catch (error: any) {
@@ -309,7 +351,7 @@ app.post('/api/posts', requireDb, authenticateToken, requireAdmin, async (req: a
 
 // CATEGORIES
 app.get('/api/categories', async (req, res) => {
-    if (!supabase) return res.json(demoCategories);
+    if (!supabase) return res.json(localDb.categories);
 
     try {
         const {data, error} = await supabase.from('categories').select('*').order('name');
@@ -425,10 +467,10 @@ app.get('/api/admin/stats', requireDb, authenticateToken, requireAdmin, async (r
          res.json({posts, users, comments, likes});
        } else {
          res.json({
-           posts: demoPosts.length,
-           users: mockUsers.length,
-           comments: 12,
-           likes: 38
+           posts: localDb.posts.length,
+           users: localDb.users.length,
+           comments: localDb.comments.length || 12,
+           likes: localDb.likes.length || 38
          });
        }
     } catch(err: any) {
