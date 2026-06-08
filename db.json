@@ -9,7 +9,27 @@
       "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=250&auto=format&fit=crop"
     }
   ],
-  "posts": [],
+  "posts": [
+    {
+      "id": "demo-post-1780885512048",
+      "title": " portfolio website",
+      "slug": "-portfolio-website",
+      "excerpt": " portfolio website",
+      "content": "Welcome to my portfolio website, where creativity meets innovation.\nI am passionate about building solutions that make a positive impact.\nThis platform showcases my skills, projects, and professional journey.\nEach project reflects my dedication to quality and continuous learning.\nI enjoy exploring new technologies and turning ideas into reality.\nMy goal is to create meaningful experiences through my work.\nHere, you can discover my achievements, expertise, and interests.\nI believe in growth, collaboration, and lifelong development.\nThank you for taking the time to visit my portfolio.\nI look forward to connecting and creating opportunities together.\n",
+      "featured_image": "/uploads/1780885509948-kw6k7p.png",
+      "category_id": "demo-category-tech",
+      "author_id": "demo-admin-id",
+      "status": "published",
+      "views": 0,
+      "created_at": "2026-06-08T02:25:12.048Z",
+      "author": {
+        "name": "Administrator"
+      },
+      "category": {
+        "name": "Technology"
+      }
+    }
+  ],
   "categories": [
     {
       "id": "demo-category-design",
@@ -27,6 +47,24 @@
       "slug": "culture"
     }
   ],
-  "comments": [],
-  "likes": []
+  "comments": [
+    {
+      "id": "comment-1780885568152",
+      "post_id": "demo-post-1780885512048",
+      "user_id": "demo-admin-id",
+      "comment": "k mgh",
+      "created_at": "2026-06-08T02:26:08.152Z",
+      "user": {
+        "name": "Administrator",
+        "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=250&auto=format&fit=crop"
+      }
+    }
+  ],
+  "likes": [
+    {
+      "id": "like-1780885561548",
+      "post_id": "demo-post-1780885512048",
+      "user_id": "demo-admin-id"
+    }
+  ]
 }

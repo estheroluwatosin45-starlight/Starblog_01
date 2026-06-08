@@ -11,6 +11,7 @@ import 'dotenv/config';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
+import multer from 'multer';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5173;
@@ -63,6 +64,28 @@ const seedSupabaseAdmin = async () => {
   }
 };
 
+// Ensure bucket exists in Supabase
+const ensureBucketExists = async () => {
+  if (!supabase) return;
+  try {
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    if (listError) throw listError;
+    
+    const exists = buckets.some((b: any) => b.name === 'blog-assets');
+    if (!exists) {
+      const { error: createError } = await supabase.storage.createBucket('blog-assets', {
+        public: true,
+        allowedMimeTypes: ['image/*'],
+        fileSizeLimit: 5242880 // 5MB
+      });
+      if (createError) throw createError;
+      console.log('Created Supabase storage bucket "blog-assets".');
+    }
+  } catch (err: any) {
+    console.error('Failed to ensure Supabase bucket exists:', err.message);
+  }
+};
+
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -71,6 +94,7 @@ let supabase: any = null;
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
   seedSupabaseAdmin().catch(console.error);
+  ensureBucketExists().catch(console.error);
 }
 
 const demoCategories = [
@@ -638,6 +662,54 @@ app.get('/api/posts/:postId/like-count', async (req, res) => {
     } catch(err: any) {
         res.status(500).json({ error: err.message });
     }
+});
+// Local Uploads setup
+const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+app.post('/api/upload', requireDb, upload.single('file'), async (req: any, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const file = req.file;
+    const fileExt = path.extname(file.originalname) || '.jpg';
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}${fileExt}`;
+
+    if (supabase) {
+      const { data, error } = await supabase.storage
+        .from('blog-assets')
+        .upload(fileName, file.buffer, {
+          contentType: file.mimetype,
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('blog-assets')
+        .getPublicUrl(fileName);
+
+      res.json({ url: publicUrl });
+    } else {
+      const filePath = path.join(uploadsDir, fileName);
+      fs.writeFileSync(filePath, file.buffer);
+      const fileUrl = `/uploads/${fileName}`;
+      res.json({ url: fileUrl });
+    }
+  } catch (error: any) {
+    console.error('Upload failed:', error);
+    res.status(500).json({ error: error.message || 'File upload failed' });
+  }
 });
 
 

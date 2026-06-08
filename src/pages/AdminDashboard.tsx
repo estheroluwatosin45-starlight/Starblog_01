@@ -384,10 +384,43 @@ export default function AdminDashboard() {
                                </div>
                             </div>
                          </div>
-                         <div>
-                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Featured Image URL</label>
-                            <input value={featuredImage} onChange={e => setFeaturedImage(e.target.value)} className="w-full glass-input px-4 py-3 rounded-xl border-slate-200" placeholder="https://..." />
-                         </div>
+                          <div>
+                             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Featured Image</label>
+                             <div className="flex gap-4 items-center">
+                                <input 
+                                   value={featuredImage} 
+                                   onChange={e => setFeaturedImage(e.target.value)} 
+                                   className="flex-1 glass-input px-4 py-3 rounded-xl border-slate-200" 
+                                   placeholder="https://... or upload one" 
+                                />
+                                <label className="shrink-0 px-4 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-emerald-500 dark:hover:bg-emerald-400 font-bold rounded-xl shadow-md cursor-pointer transition-all hover:scale-[1.02] flex items-center justify-center gap-2 text-sm">
+                                   <span>Upload file</span>
+                                   <input 
+                                      type="file" 
+                                      accept="image/*" 
+                                      className="hidden" 
+                                      onChange={async (e) => {
+                                         const file = e.target.files?.[0];
+                                         if (!file) return;
+                                         const formData = new FormData();
+                                         formData.append('file', file);
+                                         const toastId = toast.loading('Uploading image...');
+                                         try {
+                                            const { data } = await api.post('/upload', formData, {
+                                               headers: {
+                                                  'Content-Type': 'multipart/form-data'
+                                               }
+                                            });
+                                            setFeaturedImage(data.url);
+                                            toast.success('Image uploaded successfully!', { id: toastId });
+                                         } catch (err: any) {
+                                            toast.error(err.response?.data?.error || 'Failed to upload image', { id: toastId });
+                                         }
+                                      }}
+                                   />
+                                </label>
+                             </div>
+                          </div>
                       </div>
 
                       <div>
