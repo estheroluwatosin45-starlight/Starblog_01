@@ -205,6 +205,36 @@ const requireAdmin = (req: any, res: any, next: any) => {
 // ROUTES
 // -------------------------------------------------------------
 
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    supabaseInitialized: !!supabase,
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      VERCEL: process.env.VERCEL,
+      PORT: process.env.PORT,
+      HAS_SUPABASE_URL: !!process.env.SUPABASE_URL,
+      HAS_SUPABASE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    }
+  });
+});
+
+app.get('/api/test-db', async (req, res) => {
+  if (!supabase) {
+    return res.json({ status: 'mocked', message: 'Supabase is not initialized, using local fallback.' });
+  }
+  try {
+    const { data, error } = await supabase.from('categories').select('*').limit(1);
+    if (error) {
+      return res.status(500).json({ status: 'error', error: error.message, details: error });
+    }
+    return res.json({ status: 'success', data });
+  } catch (err: any) {
+    return res.status(500).json({ status: 'crash', error: err.message, stack: err.stack });
+  }
+});
+
 // AUTH
 app.post('/api/auth/register', requireDb, async (req, res) => {
   try {
