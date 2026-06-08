@@ -163,14 +163,14 @@ export default function AdminDashboard() {
         const { data } = await api.get('/admin/stats');
         return data;
      },
-     enabled: user?.role === 'admin'
+     enabled: user?.role?.trim().toLowerCase() === 'admin'
   });
 
   const { data: categories } = useQuery({
      queryKey: ['categories'],
      queryFn: async () => {
         const { data } = await api.get('/categories');
-        return data;
+        return Array.isArray(data) ? data : [];
      }
   });
 
@@ -199,7 +199,7 @@ export default function AdminDashboard() {
   });
 
   if (loading) return null;
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role?.trim().toLowerCase() === 'admin';
 
   if (!isAdmin) {
      return <AdminLogin theme={theme} toggleTheme={toggleTheme} />;
