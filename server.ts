@@ -92,9 +92,13 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 let supabase: any = null;
 if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  seedSupabaseAdmin().catch(console.error);
-  ensureBucketExists().catch(console.error);
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey);
+    seedSupabaseAdmin().catch(console.error);
+    ensureBucketExists().catch(console.error);
+  } catch (err: any) {
+    console.error('Failed to initialize Supabase client:', err.message);
+  }
 }
 
 const demoCategories = [
@@ -125,12 +129,14 @@ let localDb = {
   likes: [] as any[]
 };
 
-// Sync memory state with local JSON file
 const loadLocalDb = () => {
   try {
     if (fs.existsSync(DB_FILE)) {
       const rawData = fs.readFileSync(DB_FILE, 'utf-8');
-      localDb = JSON.parse(rawData);
+      const parsed = JSON.parse(rawData);
+      if (parsed && typeof parsed === 'object') {
+        localDb = { ...localDb, ...parsed };
+      }
       // Automatically filter out demo posts to clean up existing databases
       if (localDb.posts) {
         localDb.posts = localDb.posts.filter(p => !p.id.startsWith('demo-post-'));
@@ -143,6 +149,12 @@ const loadLocalDb = () => {
   } catch (err) {
     console.error('Error reading local db file, using defaults:', err);
   }
+  // Ensure fallback arrays are populated
+  localDb.users ??= [];
+  localDb.posts ??= [];
+  localDb.categories ??= [];
+  localDb.comments ??= [];
+  localDb.likes ??= [];
 };
 
 const saveLocalDb = () => {
@@ -695,8 +707,12 @@ app.get('/api/posts/:postId/like-count', async (req, res) => {
 });
 // Local Uploads setup
 const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (err: any) {
+  console.warn('Could not create uploads directory (expected on read-only environments like Vercel):', err.message);
 }
 app.use('/uploads', express.static(uploadsDir));
 
