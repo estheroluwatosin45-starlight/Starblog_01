@@ -332,7 +332,13 @@ export default function AdminDashboard() {
                                       </span>
                                    </td>
                                    <td className="px-6 py-4 hidden sm:table-cell text-slate-500 whitespace-nowrap">
-                                      {format(new Date(post.created_at), 'MMM d, yyyy')}
+                                      {post.created_at ? (() => {
+                                         try {
+                                            return format(new Date(post.created_at), 'MMM d, yyyy');
+                                         } catch (e) {
+                                            return '---';
+                                         }
+                                      })() : '---'}
                                    </td>
                                    <td className="px-6 py-4 text-right">
                                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

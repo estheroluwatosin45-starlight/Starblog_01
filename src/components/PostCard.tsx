@@ -51,7 +51,15 @@ const PostCard: FC<{ post: Post }> = ({ post }) => {
               </div>
               <div className="text-xs">
                  <p className="font-medium text-slate-900 dark:text-white">{post.author?.name || 'Anonymous'}</p>
-                 <p className="text-slate-500">{format(new Date(post.created_at), 'MMM d, yyyy')}</p>
+                 <p className="text-slate-500">
+                    {post.created_at ? (() => {
+                       try {
+                          return format(new Date(post.created_at), 'MMM d, yyyy');
+                       } catch (e) {
+                          return '---';
+                       }
+                    })() : '---'}
+                 </p>
               </div>
            </div>
         </div>

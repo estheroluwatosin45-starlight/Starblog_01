@@ -125,7 +125,15 @@ export default function BlogDetails() {
                  </div>
                  <div className="text-left">
                     <p className="font-medium text-slate-900 dark:text-white">{post.author?.name || 'Anonymous'}</p>
-                    <p className="text-xs">{format(new Date(post.created_at), 'MMM d, yyyy')}</p>
+                    <p className="text-xs">
+                        {post.created_at ? (() => {
+                           try {
+                              return format(new Date(post.created_at), 'MMM d, yyyy');
+                           } catch (e) {
+                              return '---';
+                           }
+                        })() : '---'}
+                     </p>
                  </div>
               </div>
           </div>
@@ -192,7 +200,15 @@ export default function BlogDetails() {
                    <div>
                       <div className="flex items-baseline gap-2 mb-1">
                          <span className="font-semibold text-slate-900 dark:text-white">{comment.user?.name || 'Anonymous'}</span>
-                         <span className="text-xs text-slate-500">{format(new Date(comment.created_at), 'MMM d, yyyy')}</span>
+                         <span className="text-xs text-slate-500">
+                             {comment.created_at ? (() => {
+                                try {
+                                   return format(new Date(comment.created_at), 'MMM d, yyyy');
+                                } catch (e) {
+                                   return '---';
+                                }
+                             })() : '---'}
+                          </span>
                       </div>
                       <p className="text-slate-700 dark:text-slate-300">{comment.comment}</p>
                    </div>
