@@ -93,26 +93,28 @@ function AdminLayout() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/admin" element={<AdminLayout />} />
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-            </Route>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="about" element={<About />} />
-              <Route path="blog" element={<BlogList />} />
-              <Route path="blog/:slug" element={<BlogDetails />} />
-              <Route path="contact" element={<Contact />} />
-            </Route>
-          </Routes>
-        </Router>
-        <Toaster position="bottom-center" />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/admin" element={<AdminLayout />} />
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+              </Route>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Home />} />
+                <Route path="about" element={<About />} />
+                <Route path="blog" element={<BlogList />} />
+                <Route path="blog/:slug" element={<BlogDetails />} />
+                <Route path="contact" element={<Contact />} />
+              </Route>
+            </Routes>
+          </Router>
+          <Toaster position="bottom-center" />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

@@ -97,12 +97,39 @@ export default function Navbar() {
             >
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-            <a
-              href="/#subscribe"
-              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 transition-all dark:bg-white dark:text-slate-900 dark:hover:bg-emerald-400"
-            >
-              Subscribe
-            </a>
+            {user ? (
+              <>
+                {user.role?.trim().toLowerCase() === 'admin' && (
+                  <Link
+                    to="/admin"
+                    className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/25 transition-all cursor-pointer"
+                  >
+                    Admin Panel
+                  </Link>
+                )}
+                <button
+                  onClick={logout}
+                  className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-500 transition-colors cursor-pointer"
+                >
+                  Sign In
+                </Link>
+                <a
+                  href="/#subscribe"
+                  className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20 transition-all dark:bg-white dark:text-slate-900 dark:hover:bg-emerald-400"
+                >
+                  Subscribe
+                </a>
+              </>
+            )}
           </div>
 
           {/* Mobile toggle */}
@@ -141,13 +168,42 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="h-px bg-slate-200 dark:bg-slate-800 my-2" />
-               <a
-                 href="/#subscribe"
-                 onClick={() => setIsOpen(false)}
-                 className="block w-full px-4 py-3 text-center rounded-xl font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 mt-2"
-               >
-                 Subscribe
-               </a>
+              {user ? (
+                <>
+                  {user.role?.trim().toLowerCase() === 'admin' && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsOpen(false)}
+                      className="block w-full px-4 py-3 text-center rounded-xl font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                    >
+                      Admin Panel
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => { logout(); setIsOpen(false); }}
+                    className="block w-full px-4 py-3 text-center rounded-xl font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="block w-full px-4 py-3 text-center rounded-xl font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <a
+                    href="/#subscribe"
+                    onClick={() => setIsOpen(false)}
+                    className="block w-full px-4 py-3 text-center rounded-xl font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 mt-2"
+                  >
+                    Subscribe
+                  </a>
+                </>
+              )}
               <div className="h-px bg-slate-200 dark:bg-slate-800 my-2" />
               <button
                 onClick={() => { toggleTheme(); setIsOpen(false); }}
