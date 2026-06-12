@@ -275,10 +275,10 @@ export default function AdminDashboard() {
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                       {[
-                         { label: 'Published Articles', value: stats?.posts || 0, color: 'text-blue-500' },
-                         { label: 'Active Users', value: stats?.users || 0, color: 'text-emerald-500' },
-                         { label: 'Total Comments', value: stats?.comments || 0, color: 'text-purple-500' },
-                         { label: 'Total Likes', value: stats?.likes || 0, color: 'text-rose-500' },
+                         { label: 'Published Articles', value: typeof stats?.posts === 'number' ? stats.posts : 0, color: 'text-blue-500' },
+                         { label: 'Active Users', value: typeof stats?.users === 'number' ? stats.users : 0, color: 'text-emerald-500' },
+                         { label: 'Total Comments', value: typeof stats?.comments === 'number' ? stats.comments : 0, color: 'text-purple-500' },
+                         { label: 'Total Likes', value: typeof stats?.likes === 'number' ? stats.likes : 0, color: 'text-rose-500' },
                       ].map((stat, i) => (
                          <div key={i} className="glass-card p-6 flex flex-col justify-between h-32 relative overflow-hidden">
                             <div className={`absolute top-0 right-0 w-24 h-24 bg-current opacity-[0.03] rounded-full -translate-y-1/2 translate-x-1/2 ${stat.color}`}></div>
