@@ -10,7 +10,6 @@ import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import path from 'path';
 import fs from 'fs';
-import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
 
 const app = express();
@@ -246,6 +245,29 @@ app.get('/api/test-db', async (req, res) => {
     return res.status(500).json({ status: 'crash', error: err.message, stack: err.stack });
   }
 });
+
+app.get('/api/test-debug', async (req, res) => {
+  if (!supabase) {
+    return res.json({ status: 'mocked', message: 'No Supabase connection' });
+  }
+  try {
+    const p = await supabase.from('posts').select('*', {count: 'exact', head: true});
+    const u = await supabase.from('users').select('*', {count: 'exact', head: true});
+    
+    return res.json({
+      p,
+      p_keys: Object.keys(p),
+      p_count_type: typeof p.count,
+      p_count: p.count,
+      u,
+      u_keys: Object.keys(u),
+      u_count: u.count
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
 
 // AUTH
 app.post('/api/auth/register', requireDb, async (req, res) => {
@@ -801,6 +823,7 @@ async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     process.env.DISABLE_HMR ??= 'true';
 
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
