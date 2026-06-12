@@ -483,6 +483,60 @@ app.post('/api/posts', requireDb, authenticateToken, requireAdmin, async (req: a
   }
 });
 
+app.put('/api/posts/:id', requireDb, authenticateToken, requireAdmin, async (req: any, res) => {
+  const { id } = req.params;
+  const postData = req.body;
+
+  try {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('posts')
+        .update(postData)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      res.json(data);
+    } else {
+      const idx = localDb.posts.findIndex((p) => p.id === id);
+      if (idx === -1) return res.status(404).json({ error: 'Post not found' });
+      localDb.posts[idx] = {
+        ...localDb.posts[idx],
+        ...postData,
+        category: { name: localDb.categories.find(c => c.id === postData.category_id)?.name || 'Design' }
+      };
+      saveLocalDb();
+      res.json(localDb.posts[idx]);
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/posts/:id', requireDb, authenticateToken, requireAdmin, async (req: any, res) => {
+  const { id } = req.params;
+
+  try {
+    if (supabase) {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } else {
+      const idx = localDb.posts.findIndex((p) => p.id === id);
+      if (idx === -1) return res.status(404).json({ error: 'Post not found' });
+      localDb.posts.splice(idx, 1);
+      saveLocalDb();
+      res.json({ success: true });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 // CATEGORIES
 app.get('/api/categories', async (req, res) => {
     if (!supabase) return res.json(localDb.categories);

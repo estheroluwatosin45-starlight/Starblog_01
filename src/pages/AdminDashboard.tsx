@@ -198,6 +198,36 @@ export default function AdminDashboard() {
      onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to create post')
   });
 
+   const [editingPost, setEditingPost] = useState<any>(null);
+
+   const updatePost = useMutation({
+      mutationFn: async () => {
+         if (!editingPost) return;
+         await api.put(`/posts/${editingPost.id}`, {
+            title, slug, excerpt, content, featured_image: featuredImage, category_id: categoryId, status: 'published'
+         });
+      },
+      onSuccess: () => {
+         toast.success('Post updated successfully');
+         queryClient.invalidateQueries({queryKey: ['posts']});
+         setTitle(''); setSlug(''); setExcerpt(''); setContent(''); setFeaturedImage(''); setCategoryId('');
+         setEditingPost(null);
+         setActiveTab('posts');
+      },
+      onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to update post')
+   });
+
+   const deletePost = useMutation({
+      mutationFn: async (id: string) => {
+         await api.delete(`/posts/${id}`);
+      },
+      onSuccess: () => {
+         toast.success('Post deleted successfully');
+         queryClient.invalidateQueries({queryKey: ['posts']});
+      },
+      onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to delete post')
+   });
+
   if (loading) return null;
   const isAdmin = user?.role?.trim().toLowerCase() === 'admin';
 
@@ -255,7 +285,10 @@ export default function AdminDashboard() {
              {tabs.map((tab) => (
                 <button 
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)} 
+                  onClick={() => {
+                     setActiveTab(tab.id);
+                     if (tab.id !== 'new-post') { setEditingPost(null); setTitle(''); setSlug(''); setExcerpt(''); setContent(''); setFeaturedImage(''); setCategoryId(''); }
+                  }} 
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-200 ${
                      activeTab === tab.id 
                         ? 'bg-emerald-50 text-emerald-600 shadow-sm dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20' 
@@ -302,7 +335,7 @@ export default function AdminDashboard() {
                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 glass-card overflow-hidden">
                     <div className="p-6 border-b border-slate-200 dark:border-white/10 flex justify-between items-center">
                        <h2 className="text-xl font-bold">Manage Articles</h2>
-                       <button onClick={() => setActiveTab('new-post')} className="text-sm bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-500 transition-colors">
+                       <button onClick={() => { setActiveTab('new-post'); setEditingPost(null); setTitle(''); setSlug(''); setExcerpt(''); setContent(''); setFeaturedImage(''); setCategoryId(''); }} className="text-sm bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-500 transition-colors">
                           + New Post
                        </button>
                     </div>
@@ -342,8 +375,33 @@ export default function AdminDashboard() {
                                    </td>
                                    <td className="px-6 py-4 text-right">
                                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                         <button className="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-blue-50"><Edit2 className="w-4 h-4" /></button>
-                                         <button className="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
+                                         <button 
+                                            onClick={() => {
+                                               setEditingPost(post);
+                                               setTitle(post.title);
+                                               setSlug(post.slug);
+                                               setExcerpt(post.excerpt);
+                                               setContent(post.content);
+                                               setFeaturedImage(post.featured_image || '');
+                                               setCategoryId(post.category_id || '');
+                                               setActiveTab('new-post');
+                                            }}
+                                            className="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-blue-50 cursor-pointer"
+                                            title="Edit Post"
+                                         >
+                                            <Edit2 className="w-4 h-4" />
+                                         </button>
+                                         <button 
+                                            onClick={() => {
+                                               if (window.confirm('Are you sure you want to delete this article?')) {
+                                                  deletePost.mutate(post.id);
+                                               }
+                                            }}
+                                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-rose-50 cursor-pointer"
+                                            title="Delete Post"
+                                         >
+                                            <Trash2 className="w-4 h-4" />
+                                         </button>
                                       </div>
                                    </td>
                                 </tr>
@@ -362,7 +420,7 @@ export default function AdminDashboard() {
              {/* CREATE POST TAB */}
              {activeTab === 'new-post' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 glass-card p-6 md:p-8">
-                   <h2 className="text-2xl font-bold mb-8">Draft New Article</h2>
+                   <h2 className="text-2xl font-bold mb-8">{editingPost ? 'Edit Article' : 'Draft New Article'}</h2>
                    <div className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-6">
                          <div>
@@ -440,10 +498,24 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-800">
-                         <button onClick={() => setActiveTab('posts')} className="px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">Discard</button>
-                         <button className="px-6 py-3 rounded-xl font-bold border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors">Save Draft</button>
-                         <button onClick={() => createPost.mutate()} disabled={createPost.isPending || !title || !content || !categoryId} className="px-8 py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors shadow-lg disabled:opacity-50">
-                            {createPost.isPending ? 'Publishing...' : 'Publish Article'}
+                         <button 
+                            onClick={() => { 
+                               setTitle(''); setSlug(''); setExcerpt(''); setContent(''); setFeaturedImage(''); setCategoryId(''); 
+                               setEditingPost(null); 
+                               setActiveTab('posts'); 
+                            }} 
+                            className="px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                         >
+                            Cancel
+                         </button>
+                         <button 
+                            onClick={() => editingPost ? updatePost.mutate() : createPost.mutate()} 
+                            disabled={createPost.isPending || updatePost.isPending || !title || !content || !categoryId} 
+                            className="px-8 py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
+                         >
+                            {editingPost 
+                               ? (updatePost.isPending ? 'Updating...' : 'Update Article') 
+                               : (createPost.isPending ? 'Publishing...' : 'Publish Article')}
                          </button>
                       </div>
                    </div>
