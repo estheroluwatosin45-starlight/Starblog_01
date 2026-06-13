@@ -157,6 +157,11 @@ export default function AdminDashboard() {
   const [featuredImage, setFeaturedImage] = useState('');
   const [categoryId, setCategoryId] = useState('');
 
+  // Category form state
+  const [categoryName, setCategoryName] = useState('');
+  const [categorySlug, setCategorySlug] = useState('');
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+
   const { data: stats } = useQuery({
      queryKey: ['admin-stats'],
      queryFn: async () => {
@@ -228,6 +233,45 @@ export default function AdminDashboard() {
       onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to delete post')
    });
 
+   const createCategory = useMutation({
+      mutationFn: async () => {
+         await api.post('/categories', { name: categoryName, slug: categorySlug });
+      },
+      onSuccess: () => {
+         toast.success('Category created successfully');
+         queryClient.invalidateQueries({ queryKey: ['categories'] });
+         setCategoryName('');
+         setCategorySlug('');
+      },
+      onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to create category')
+   });
+
+   const updateCategory = useMutation({
+      mutationFn: async () => {
+         if (!editingCategory) return;
+         await api.put(`/categories/${editingCategory.id}`, { name: categoryName, slug: categorySlug });
+      },
+      onSuccess: () => {
+         toast.success('Category updated successfully');
+         queryClient.invalidateQueries({ queryKey: ['categories'] });
+         setCategoryName('');
+         setCategorySlug('');
+         setEditingCategory(null);
+      },
+      onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to update category')
+   });
+
+   const deleteCategory = useMutation({
+      mutationFn: async (id: string) => {
+         await api.delete(`/categories/${id}`);
+      },
+      onSuccess: () => {
+         toast.success('Category deleted successfully');
+         queryClient.invalidateQueries({ queryKey: ['categories'] });
+      },
+      onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to delete category')
+   });
+
   if (loading) return null;
   const isAdmin = user?.role?.trim().toLowerCase() === 'admin';
 
@@ -288,6 +332,7 @@ export default function AdminDashboard() {
                   onClick={() => {
                      setActiveTab(tab.id);
                      if (tab.id !== 'new-post') { setEditingPost(null); setTitle(''); setSlug(''); setExcerpt(''); setContent(''); setFeaturedImage(''); setCategoryId(''); }
+                     if (tab.id !== 'categories') { setEditingCategory(null); setCategoryName(''); setCategorySlug(''); }
                   }} 
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all duration-200 ${
                      activeTab === tab.id 
@@ -522,11 +567,129 @@ export default function AdminDashboard() {
                 </div>
              )}
 
+             {/* CATEGORIES TAB */}
+             {activeTab === 'categories' && (
+                <div className="grid md:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                   {/* Category Form */}
+                   <div className="md:col-span-1 glass-card p-6 h-fit">
+                      <h2 className="text-xl font-bold mb-6">
+                         {editingCategory ? 'Edit Category' : 'Create Category'}
+                      </h2>
+                      <div className="space-y-4">
+                         <div>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Category Name</label>
+                            <input 
+                               value={categoryName} 
+                               onChange={e => {
+                                  setCategoryName(e.target.value);
+                                  setCategorySlug(e.target.value.toLowerCase().trim().replace(/ /g, '-').replace(/[^\w-]+/g, ''));
+                               }} 
+                               className="w-full glass-input px-4 py-3 rounded-xl border-slate-200" 
+                               placeholder="e.g. Life & Style" 
+                            />
+                         </div>
+                         <div>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">URL Slug</label>
+                            <input 
+                               value={categorySlug} 
+                               onChange={e => setCategorySlug(e.target.value)} 
+                               className="w-full glass-input px-4 py-3 rounded-xl border-slate-200" 
+                               placeholder="e.g. life-style" 
+                            />
+                         </div>
+                         <div className="flex gap-2 pt-2">
+                            <button 
+                               onClick={() => editingCategory ? updateCategory.mutate() : createCategory.mutate()}
+                               disabled={createCategory.isPending || updateCategory.isPending || !categoryName || !categorySlug}
+                               className="flex-1 px-4 py-2.5 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors shadow-md disabled:opacity-50 cursor-pointer text-sm"
+                            >
+                               {editingCategory 
+                                  ? (updateCategory.isPending ? 'Updating...' : 'Update') 
+                                  : (createCategory.isPending ? 'Creating...' : 'Create')}
+                            </button>
+                            {editingCategory && (
+                               <button 
+                                  onClick={() => {
+                                     setEditingCategory(null);
+                                     setCategoryName('');
+                                     setCategorySlug('');
+                                  }}
+                                  className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer text-sm"
+                               >
+                                  Cancel
+                               </button>
+                            )}
+                         </div>
+                      </div>
+                   </div>
+
+                   {/* Categories Table */}
+                   <div className="md:col-span-2 glass-card overflow-hidden">
+                      <div className="p-6 border-b border-slate-200 dark:border-white/10">
+                         <h2 className="text-xl font-bold">Categories</h2>
+                      </div>
+                      <div className="overflow-x-auto">
+                         <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50 dark:bg-white/5 text-slate-500 font-semibold uppercase text-xs tracking-wider">
+                               <tr>
+                                  <th className="px-6 py-4">Name</th>
+                                  <th className="px-6 py-4">Slug</th>
+                                  <th className="px-6 py-4 text-right">Actions</th>
+                               </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 dark:divide-white/10">
+                               {categories?.map((cat: any) => (
+                                  <tr key={cat.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                                     <td className="px-6 py-4 font-semibold text-slate-900 dark:text-white">
+                                        {cat.name}
+                                     </td>
+                                     <td className="px-6 py-4 text-slate-500">
+                                        {cat.slug}
+                                     </td>
+                                     <td className="px-6 py-4 text-right">
+                                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                           <button 
+                                              onClick={() => {
+                                                 setEditingCategory(cat);
+                                                 setCategoryName(cat.name);
+                                                 setCategorySlug(cat.slug);
+                                              }}
+                                              className="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-blue-50 cursor-pointer animate-none"
+                                              title="Edit Category"
+                                           >
+                                              <Edit2 className="w-4 h-4" />
+                                           </button>
+                                           <button 
+                                              onClick={() => {
+                                                 if (window.confirm(`Are you sure you want to delete the category "${cat.name}"?`)) {
+                                                    deleteCategory.mutate(cat.id);
+                                                 }
+                                              }}
+                                              className="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-rose-50 cursor-pointer animate-none"
+                                              title="Delete Category"
+                                           >
+                                              <Trash2 className="w-4 h-4" />
+                                           </button>
+                                        </div>
+                                     </td>
+                                  </tr>
+                               ))}
+                               {(!categories || categories.length === 0) && (
+                                  <tr>
+                                     <td colSpan={3} className="px-6 py-12 text-center text-slate-500">No categories found. Create one on the left!</td>
+                                  </tr>
+                               )}
+                            </tbody>
+                         </table>
+                      </div>
+                   </div>
+                </div>
+             )}
+
              {/* MOCK TABS FOR OTHER MANAGEMENT SECTIONS */}
-             {(activeTab === 'categories' || activeTab === 'comments' || activeTab === 'users' || activeTab === 'settings') && (
+             {(activeTab === 'comments' || activeTab === 'users' || activeTab === 'settings') && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 glass-card p-12 text-center">
                    <div className="w-16 h-16 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                      {activeTab === 'categories' && <List className="w-8 h-8" />}
                       {activeTab === 'comments' && <MessageSquare className="w-8 h-8" />}
                       {activeTab === 'users' && <Users className="w-8 h-8" />}
                       {activeTab === 'settings' && <Settings className="w-8 h-8" />}

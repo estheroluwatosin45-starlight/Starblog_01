@@ -550,6 +550,83 @@ app.get('/api/categories', async (req, res) => {
     }
 });
 
+app.post('/api/categories', requireDb, authenticateToken, requireAdmin, async (req: any, res) => {
+  try {
+    const { name, slug } = req.body;
+    if (!name || !slug) return res.status(400).json({ error: 'Missing name or slug' });
+
+    if (supabase) {
+      const { data, error } = await supabase.from('categories').insert([{ name, slug }]).select().single();
+      if (error) throw error;
+      res.json(data);
+    } else {
+      const newCategory = {
+        id: `category-${Date.now()}`,
+        name,
+        slug
+      };
+      localDb.categories.push(newCategory);
+      saveLocalDb();
+      res.json(newCategory);
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/categories/:id', requireDb, authenticateToken, requireAdmin, async (req: any, res) => {
+  const { id } = req.params;
+  const { name, slug } = req.body;
+
+  try {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('categories')
+        .update({ name, slug })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      res.json(data);
+    } else {
+      const idx = localDb.categories.findIndex((c) => c.id === id);
+      if (idx === -1) return res.status(404).json({ error: 'Category not found' });
+      localDb.categories[idx] = {
+        ...localDb.categories[idx],
+        name,
+        slug
+      };
+      saveLocalDb();
+      res.json(localDb.categories[idx]);
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/categories/:id', requireDb, authenticateToken, requireAdmin, async (req: any, res) => {
+  const { id } = req.params;
+
+  try {
+    if (supabase) {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      res.json({ success: true });
+    } else {
+      const idx = localDb.categories.findIndex((c) => c.id === id);
+      if (idx === -1) return res.status(404).json({ error: 'Category not found' });
+      localDb.categories.splice(idx, 1);
+      saveLocalDb();
+      res.json({ success: true });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const getOrCreateAnonymousUser = async () => {
   const email = 'anonymous@starblog.com';
   if (supabase) {

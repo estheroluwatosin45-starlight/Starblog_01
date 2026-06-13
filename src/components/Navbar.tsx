@@ -99,14 +99,6 @@ export default function Navbar() {
             </button>
             {user ? (
               <>
-                {user.role?.trim().toLowerCase() === 'admin' && (
-                  <Link
-                    to="/admin"
-                    className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/25 transition-all cursor-pointer"
-                  >
-                    Admin Panel
-                  </Link>
-                )}
                 <button
                   onClick={logout}
                   className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
@@ -170,15 +162,6 @@ export default function Navbar() {
               <div className="h-px bg-slate-200 dark:bg-slate-800 my-2" />
               {user ? (
                 <>
-                  {user.role?.trim().toLowerCase() === 'admin' && (
-                    <Link
-                      to="/admin"
-                      onClick={() => setIsOpen(false)}
-                      className="block w-full px-4 py-3 text-center rounded-xl font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
-                    >
-                      Admin Panel
-                    </Link>
-                  )}
                   <button
                     onClick={() => { logout(); setIsOpen(false); }}
                     className="block w-full px-4 py-3 text-center rounded-xl font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer"
