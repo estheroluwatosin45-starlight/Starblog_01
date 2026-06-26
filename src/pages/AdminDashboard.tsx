@@ -112,11 +112,6 @@ function AdminLogin({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleThe
             </button>
           </div>
         </form>
-        <div className="mt-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs text-center space-y-1">
-           <div className="font-bold uppercase tracking-wider">Demo Administrator Credentials</div>
-           <div><strong>Email:</strong> admin@starblog.com</div>
-           <div><strong>Password:</strong> admin2026</div>
-        </div>
       </div>
     </div>
   );
