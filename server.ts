@@ -453,7 +453,7 @@ app.get('/api/posts/:slug', async (req, res) => {
 // ADMIN POSTS
 app.post('/api/posts', requireDb, authenticateToken, requireAdmin, async (req: any, res) => {
   try {
-    const postData = { ...req.body, author_id: req.user.id };
+    const postData = { ...req.body, author_id: req.user.id, views: 0 };
     if (supabase) {
       const { data, error } = await supabase.from('posts').insert([postData]).select().single();
       if (error) throw error;

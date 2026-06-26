@@ -112,6 +112,11 @@ function AdminLogin({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleThe
             </button>
           </div>
         </form>
+        <div className="mt-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs text-center space-y-1">
+           <div className="font-bold uppercase tracking-wider">Demo Administrator Credentials</div>
+           <div><strong>Email:</strong> admin@starblog.com</div>
+           <div><strong>Password:</strong> admin2026</div>
+        </div>
       </div>
     </div>
   );
@@ -272,7 +277,27 @@ export default function AdminDashboard() {
       onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to delete category')
    });
 
-  if (loading) return null;
+    const handleSavePost = () => {
+       if (!title.trim()) {
+          toast.error('Please enter an article title.');
+          return;
+       }
+       if (!categoryId) {
+          toast.error('Please select a category.');
+          return;
+       }
+       if (!content.trim()) {
+          toast.error('Please write some content for the article.');
+          return;
+       }
+       if (editingPost) {
+          updatePost.mutate();
+       } else {
+          createPost.mutate();
+       }
+    };
+
+   if (loading) return null;
   const isAdmin = user?.role?.trim().toLowerCase() === 'admin';
 
   if (!isAdmin) {
@@ -554,8 +579,8 @@ export default function AdminDashboard() {
                             Cancel
                          </button>
                          <button 
-                            onClick={() => editingPost ? updatePost.mutate() : createPost.mutate()} 
-                            disabled={createPost.isPending || updatePost.isPending || !title || !content || !categoryId} 
+                            onClick={handleSavePost} 
+                            disabled={createPost.isPending || updatePost.isPending} 
                             className="px-8 py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold hover:bg-emerald-500 transition-colors shadow-lg disabled:opacity-50 cursor-pointer"
                          >
                             {editingPost 
