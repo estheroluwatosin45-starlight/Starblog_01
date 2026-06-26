@@ -8,8 +8,8 @@ import { LayoutDashboard, FileText, List, MessageSquare, Users, Settings, Plus, 
 import { format } from 'date-fns';
 
 function AdminLogin({ theme, toggleTheme }: { theme: 'light' | 'dark'; toggleTheme: () => void }) {
-  const [email, setEmail] = useState('admin@starblog.com');
-  const [password, setPassword] = useState('admin2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
